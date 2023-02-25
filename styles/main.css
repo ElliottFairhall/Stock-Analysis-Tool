@@ -1,0 +1,88 @@
+/* Import the Barlow font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;700&display=swap');
+
+/* Set the font family for all text to Barlow */
+* {
+  font-family: 'Barlow', sans-serif;
+}
+
+/* Make sure all images and videos are responsive */
+img,
+video {
+  max-width: 100%;
+}
+
+/* Make sure all buttons are responsive */
+button {
+  width: 100%;
+}
+
+/* Add some padding to the body to create space between elements */
+body {
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Add some margin to the top and bottom of each header element and set H1, H2, and H3 elements to #365B6D */
+h1, h2, h3 {
+  margin: 20px 0;
+  color: #365B6D;
+  font-size: 2.5rem; /* 40px */
+}
+
+/* Add a background color and some padding to the sidebar */
+.sidebar {
+  background-color: #365B6D;
+  color: #FFFFFF;
+  padding: 20px;
+}
+
+/* Customize card styles */
+.card {
+  border-radius: 15px;
+  transition: box-shadow .3s;
+
+  &:hover {
+    box-shadow: 0 0 11px rgba(33, 33, 33, .2);
+  }
+}
+
+.card-img-top {
+  transition: all .3s;
+  border-radius: 15px;
+  box-shadow: 1rem 1rem #365B6D;
+
+  &:hover {
+    transform: translate(-0.5rem, -0.5rem);
+    box-shadow: 2rem 2rem #365B6D;
+  }
+}
+
+.card-header {
+  background-color: #F7F7F7;
+}
+
+.card-body {
+  background-color: #FFFFFF;
+  color: #000000;
+}
+
+/* Customize link styles */
+a {
+  text-decoration: none;
+  color: #365B6D;
+  font-size: 1.2rem; /* 19.2px */
+
+  &:hover {
+    color: #F7F7F7;
+  }
+}
+
+/* Customize icon styles */
+.icon-style {
+  font-family: 'Barlow', sans-serif;
+  color: #365B6D;
+  font-size: 1.5rem; /* 24px */
+}
