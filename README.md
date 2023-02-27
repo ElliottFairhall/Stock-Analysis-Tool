@@ -1,6 +1,8 @@
 
 # Financial Analysis Techniques with Python
 
+**This project is currently in development**
+
 In this project, I will be showcasing various financial analysis techniques using Python. For this project I have utilized Python modules such as yfinance, matplotlib, streamlit and VaderSentiment to analyse stocks and extract news articles.
 
 To visualise this information I have create a range of visualizations of historical stock data including visualisations relatd to calculated returns, analysed news article sentiment to gain a better understanding of the performance of stocks and historical close prices.
