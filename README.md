@@ -3,7 +3,7 @@
 
 **This project is currently in development**
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](elliottfairhall-stock-analysis-tool-main-pgogm7)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](elliottfairhall-stock-analysis-tool-main-pgogm7.streamlit.app)
 
 In this project, I will be showcasing various financial analysis techniques using Python. For this project I have utilized Python modules such as yfinance, matplotlib, streamlit and VaderSentiment to analyse stocks and extract news articles.
 
