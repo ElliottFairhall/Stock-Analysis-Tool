@@ -53,7 +53,7 @@ if len(selected_tickers) < 2:
 # Concatenate the selected tickers into a single string for use in the API call
 ticker_string = ','.join(selected_tickers)
 
-@st.cache(ttl=3600) # ttl = time to live in seconds
+@st.cache_data(ttl=3600) # ttl = time to live in seconds
 def get_stock_data(ticker_string):
     stocks_df = yf.download(ticker_string, period='max', group_by='ticker')
     # Clean the data
@@ -64,15 +64,20 @@ def get_stock_data(ticker_string):
 def create_line_chart(selected_tickers, stocks_df):
     for ticker in selected_tickers:
         stock_df = stocks_df[ticker]
+        # Create new figure object
+        fig, ax = plt.subplots()  
         plt.plot(stock_df['Close'], label=ticker)
     plt.title("Close Price of Selected Stocks")
     plt.xlabel("Date")
     plt.ylabel("Close Price")
     plt.legend()
-    st.pyplot()
+    # Pass the figure object to st.pyplot
+    st.pyplot(fig) 
 
 # Create a bar chart to show the relative returns of selected stocks
 def create_bar_chart(selected_tickers, stocks_df):
+        # Create new figure object
+        fig, ax = plt.subplots()
         for ticker in selected_tickers:
             stock_df = stocks_df[ticker]
             stock_df["returns"] = stock_df["Close"].pct_change()
@@ -81,10 +86,13 @@ def create_bar_chart(selected_tickers, stocks_df):
             plt.xlabel("Date")
             plt.ylabel("Relative Return (%)")
             plt.legend()
-            st.pyplot()           
+            # Pass the figure object to st.pyplot
+            st.pyplot(fig)           
 
 # Create a scatter plot to show the historical close prices of selected stocks
 def create_scatter_plot(selected_tickers, stocks_df):
+    # Create new figure object
+    fig, ax = plt.subplots()
     for ticker in selected_tickers:
         stock_df = stocks_df[ticker]
         plt.scatter(stock_df.index, stock_df["Close"], label=ticker)
@@ -92,7 +100,8 @@ def create_scatter_plot(selected_tickers, stocks_df):
     plt.xlabel("Date")
     plt.ylabel("Close Price")
     plt.legend()   
-    st.pyplot()
+    # Pass the figure object to st.pyplot
+    st.pyplot(fig)
 
 # Create a volatility analysis based on selected stocks
 def create_volatility_analysis(selected_tickers, stocks_df):
@@ -257,11 +266,14 @@ def create_sentiment_bar_chart(sentiments, selected_tickers):
         mean_sentiment = 0
 
 # display sentiment bar chart
+    # Create new figure object
+    fig, ax = plt.subplots()
     plt.bar(["Sentiment"], [mean_sentiment])
     plt.title(f"Average Sentiment of News Articles for {selected_tickers}")
     plt.xlabel("Sentiment")
     plt.ylabel("Mean Score")
-    st.pyplot()
+    # Pass the figure object to st.pyplot
+    st.pyplot(fig)
     # provide an error if no sentiment found for a selected ticker
     if len(compound_sentiments) == 0:
         st.write("No Sentiment Found for "+ ",".join(selected_tickers))

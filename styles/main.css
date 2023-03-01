@@ -28,7 +28,7 @@ body {
 /* Add some margin to the top and bottom of each header element and set H1, H2, and H3 elements to #365B6D */
 h1, h2, h3 {
   margin: 20px 0;
-  color: #365B6D;
+  color: #FFFFFF;
   font-size: 2.5rem; /* 40px */
 }
 
