@@ -42,18 +42,17 @@ st.markdown("""
 <p>In this project, I will be showcasing various financial analysis techniques using Python. I will be utilising modules such as yfinance, matplotlib, streamlit and VaderSentiment to analyse stocks and extract news articles. These modules will assist me in creating charts and visualisations of historical stock data, calculating returns and analysing sentiments of news articles. By using these modules and similar modules to this, analysts can gain a better understanding of the performance of stocks.</p>
 <hr>
 <h1>Business Stock Dropdown</h1>
-<p>The dropdown below allows users of this project to select multiple businesses from a list. In this project, the dropdown is used to select the stocks that will be analysed. The businesses that are provided include Apple Inc. (AAPL), Tesla Inc. (TSLA), Microsoft Corp. (MSFT), Alphabet Inc. (GOOGL), Amazon Inc. (AMZN), Facebook Inc. (FB), Alibaba Group Holding Ltd. (BABA), Wal-Mart Stores Inc. (WMT), General Electric Co. (GE), JPMorgan Chase & Co. (JPM), Taiwan Semiconductor Manufacturing Co. Ltd. (TSM), Comcast Corp. (CMCSA), Chevron Corp. (CVX), Procter & Gamble Co. (PG), Boeing Co. (BA), Intel Corp. (INTC), Cisco Systems Inc. (CSCO), and Pfizer Inc. (PFE). By selecting two or more of these stocks, users can gain a deeper understanding of the performance and see the potential of these companies.</p>
+<p>The dropdown below allows users of this project to select multiple businesses from a list. In this project, the dropdown is used to select the stocks that will be analysed. The businesses that are provided include Apple Inc. (AAPL), Tesla Inc. (TSLA), Microsoft Corp. (MSFT), Alphabet Inc. (GOOGL), Amazon Inc. (AMZN), Facebook Inc. (META), Alibaba Group Holding Ltd. (BABA), Wal-Mart Stores Inc. (WMT), General Electric Co. (GE), JPMorgan Chase & Co. (JPM), Taiwan Semiconductor Manufacturing Co. Ltd. (TSM), Comcast Corp. (CMCSA), Chevron Corp. (CVX), Procter & Gamble Co. (PG), Boeing Co. (BA), Intel Corp. (INTC), Cisco Systems Inc. (CSCO), and Pfizer Inc. (PFE). By selecting two or more of these stocks, users can gain a deeper understanding of the performance and see the potential of these companies.</p>
 """, unsafe_allow_html=True)
 
 # Create a multi-select box for the user to select stock tickers
-selected_tickers = st.multiselect("Select stocks to analyse", ["AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "FB", "BABA", "WMT", "GE", "JPM", "TSM", "WMT", "CMCSA", "CVX", "PG", "WMT", "BA", "INTC", "CSCO", "PFE"], default=["MSFT","TSLA"])
+selected_tickers = st.multiselect("Select stocks to analyse", ["AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "META", "BABA", "WMT", "GE", "JPM", "TSM", "WMT", "CMCSA", "CVX", "PG", "WMT", "BA", "INTC", "CSCO", "PFE"], default=["MSFT","TSLA"])
 if len(selected_tickers) < 2:
     st.error("Please select at least 2 stocks.")
 
 # Concatenate the selected tickers into a single string for use in the API call
 ticker_string = ','.join(selected_tickers)
 
-@st.cache_data(ttl=3600) # ttl = time to live in seconds
 def get_stock_data(ticker_string):
     stocks_df = yf.download(ticker_string, period='max', group_by='ticker')
     # Clean the data
