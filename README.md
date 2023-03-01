@@ -20,7 +20,7 @@ The businesses that are provided include:
 -   Microsoft Corp. (MSFT)
 -   Alphabet Inc. (GOOGL)
 -   Amazon Inc. (AMZN)
--   Facebook Inc. (FB)
+-   Facebook Inc. (META)
 -   Alibaba Group Holding Ltd. (BABA)
 -   Wal-Mart Stores Inc. (WMT)
 -   General Electric Co. (GE)
