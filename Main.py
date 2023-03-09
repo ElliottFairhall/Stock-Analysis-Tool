@@ -1,8 +1,10 @@
 import requests
+from nltk.sentiment import SentimentIntensityAnalyzer
 from PIL import Image
 import yfinance as yf
 import matplotlib.pyplot as plt
 import streamlit as st
+import plotly.graph_objs as go
 import numpy as np
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -58,35 +60,95 @@ def get_stock_data(ticker_string):
     # Clean the data
     stocks_df.dropna(inplace=True)
     return stocks_df
+    
+    # Get the news for each selected ticker
+    news_df = pd.DataFrame()
+    for ticker in selected_tickers:
+        ticker_news = yf.Ticker(ticker).news(articles=50)
+        ticker_news_df = pd.DataFrame(ticker_news)
+        ticker_news_df['symbol'] = ticker
+        news_df = pd.concat([news_df, ticker_news_df], axis=0)
+    
+    # Clean the news data
+    if not news_df.empty:
+        news_df['publishedAt'] = pd.to_datetime(news_df['publishedAt'])
+        news_df.set_index('publishedAt', inplace=True)
+        news_df = news_df[['symbol', 'title', 'url']]
+        news_df.drop_duplicates(inplace=True)
+    
+    return stocks_df, news_df
 
 # Create a line chart to show the historical close prices
 def create_line_chart(selected_tickers, stocks_df):
-    for ticker in selected_tickers:
-        stock_df = stocks_df[ticker]
-        # Create new figure object
-        fig, ax = plt.subplots()  
-        plt.plot(stock_df['Close'], label=ticker)
-    plt.title("Close Price of Selected Stocks")
-    plt.xlabel("Date")
-    plt.ylabel("Close Price")
-    plt.legend()
-    # Pass the figure object to st.pyplot
-    st.pyplot(fig) 
+    # Define a list of colors for the line traces
+    colors = ['#FFC300', '#FF5733', '#C70039', '#900C3F', '#581845']
 
-# Create a bar chart to show the relative returns of selected stocks
-def create_bar_chart(selected_tickers, stocks_df):
-        # Create new figure object
-        fig, ax = plt.subplots()
-        for ticker in selected_tickers:
-            stock_df = stocks_df[ticker]
-            stock_df["returns"] = stock_df["Close"].pct_change()
-            plt.bar(stock_df.index, stock_df["returns"], label=ticker)
-            plt.title("Relative Returns of Selected Stocks")
-            plt.xlabel("Date")
-            plt.ylabel("Relative Return (%)")
-            plt.legend()
-            # Pass the figure object to st.pyplot
-            st.pyplot(fig)           
+    # Create a new figure object
+    fig = go.Figure()
+
+    # Add a line trace for each selected ticker
+    for i, ticker in enumerate(selected_tickers):
+        stock_df = stocks_df[ticker]
+        fig.add_trace(
+            go.Scatter(
+                x=stock_df.index,
+                y=stock_df['Close'],
+                mode='lines',
+                name=ticker,
+                line=dict(color=colors[i])
+            )
+        )
+
+    # Set the chart title and axis labels
+    fig.update_layout(
+        title="Close Price of Selected Stocks",
+        xaxis_title="Date",
+        yaxis_title="Close Price"
+    )
+
+    # Show the chart
+    st.plotly_chart(fig)
+
+# Create a chart to show the relative returns of selected stocks
+def relative_returns(selected_tickers, stocks_df):
+    # Define colors
+    bar_colors = ['#FFC300', '#FF5733', '#C70039', '#900C3F', '#581845']
+
+    # Create a list to hold the traces
+    traces = []
+
+    # Loop through the selected tickers
+    for i, ticker in enumerate(selected_tickers):
+        stock_df = stocks_df[ticker].copy()
+        stock_df.loc[:, "returns"] = stock_df["Close"].pct_change()
+        traces.append(
+            go.Bar(
+                x=stock_df.index,
+                y=stock_df["returns"],
+                name=ticker,
+                marker=dict(color=bar_colors[i % len(bar_colors)])
+            )
+        )
+
+    # Create the layout
+    layout = go.Layout(
+        title="Relative Returns of Selected Stocks",
+        xaxis=dict(title="Date"),
+        yaxis=dict(title="Relative Return (%)"),
+        barmode="group",
+        plot_bgcolor='#0D5943',
+        paper_bgcolor='#0D5943',
+        font=dict(color='#FFFFFF')
+    )
+
+    # Create the figure
+    fig = go.Figure(data=traces, layout=layout)
+
+    # Pass the figure object to st.plotly_chart
+    st.plotly_chart(fig)
+
+    # Create the figure
+    fig = go.Figure(data=traces, layout=layout)
 
 # Create a scatter plot to show the historical close prices of selected stocks
 def create_scatter_plot(selected_tickers, stocks_df):
@@ -112,6 +174,8 @@ def create_volatility_analysis(selected_tickers, stocks_df):
         volatility_pct = volatility * 100
         st.write("Volatility of " + ticker + ": " + "{:.2f}%".format(volatility_pct))
 
+st.markdown("---")
+
 # create information related to line charts of historical prices 
 st.markdown(
     """
@@ -131,21 +195,25 @@ if len(selected_tickers) < 2:
     st.error("Please select at least 2 stocks to create a line chart.")
 else:
     stocks_df = get_stock_data(selected_tickers)
-    create_line_chart(selected_tickers, stocks_df)
+    # Call the create_line_chart function
+    if selected_tickers:
+        create_line_chart(selected_tickers, stocks_df)
 
-# create information related to line charts of historical prices 
+st.markdown("---")
+
+# Create information related to relative returns chart
 st.markdown(
     """
-    <h2>Line Chart of Historic Close Prices</h2>
-    <p>A historical close price line chart is a graphical representation of a stock's historical closing price over a 
-    specified period of time. The x-axis typically represents time, and the y-axis represents the closing price. 
-    The closing price is the price at which a stock is traded when the market closes for the day. 
-    Within the below historical close price line chart, I have maintained this principle providing the year within 
-    the x-axis and the close price within the y-axis.</p>
-    <p>This type of chart can provide valuable insights into a stock's historical performance, such as trends in price
-    movement, volatility, and overall market sentiment. It can also be used to compare the performance of different
-    stocks or sectors. Additionally, the historical close price line chart provided below can be used to compare the
-    performance of multiple stocks over a period of years.</p>
+<h2>Relative Returns Chart</h2>
+<p>A relative returns chart is a graphical representation of the performance of multiple stocks over a specified 
+period of time relative to a benchmark or reference point. The x-axis typically represents time, and the y-axis 
+represents the percentage change in price relative to the benchmark or reference point.</p>
+<p>The chart below shows the relative performance of the selected stocks over the past year. Positive values 
+indicate that the stock has generated a positive return, while negative values indicate that the stock has generated 
+a negative return.</p>
+<p>This type of chart can provide valuable insights into how a particular stock or sector has performed 
+relative to a benchmark or reference point over time. It can also be used to identify trends in outperformance 
+or underperformance, and to help make informed investment decisions.</p>
     """
 , unsafe_allow_html=True)
 
@@ -153,8 +221,11 @@ st.markdown(
 if len(selected_tickers) < 2:
     st.error("Please select at least 2 stocks to create a Historical Close Price Line Chart.")
 else:
-    stocks_df = get_stock_data(selected_tickers)
-    create_scatter_plot(selected_tickers, stocks_df)
+    # Call the relative_returns function
+    if selected_tickers:
+        relative_returns(selected_tickers, stocks_df)
+
+st.markdown("---")
 
 # provide information related to volatitly analysis
 st.markdown(
@@ -184,38 +255,6 @@ else:
 
 st.markdown("---")
 
-# provide information related to related news and the extraction of news articles
-st.markdown(
-    """
-    <h2>Recent News for the selected stock</h2>
-    <p>With the help of <a href='https://newsapi.org/'>newsapi.org</a>, we can extract recent news articles 
-    related to the selected stocks chosen above. These articles can give us valuable insights into the current market sentiment 
-    and news surrounding the stock.</p>
-    <p>It is important to note that while these articles may give a general idea of the sentiment, it is not a 
-    comprehensive analysis and should be used in conjunction with other technical and fundamental analysis.</p>
-    """
-    , unsafe_allow_html=True)
-
-# extract news from newapi.org
-def extract_news_articles(selected_tickers):
-    news_url = f"https://newsapi.org/v2/everything?q={selected_tickers}&sortBy=relevancy&apiKey={News_API}"
-    news_data = requests.get(news_url).json()
-    news_articles = []
-    for article in news_data["articles"]:
-        news_articles.append(article["title"] + " - " + article["description"])
-    return news_articles
-
-# analyse news sentiment based off of the news articles returned 
-def analyze_news_sentiment(selected_tickers):
-    analyzer = SentimentIntensityAnalyzer()
-    news_articles = extract_news_articles(selected_tickers) # function to extract news articles related to the stock
-    sentiments = []
-    for article in news_articles:
-        sentiment = analyzer.polarity_scores(article)
-        sentiments.append(sentiment)
-    return sentiments
-
-# provide information related to sentiment analysis of stocks
 st.markdown(
     """
     <h2>Sentiment Analysis of Stocks</h2>
@@ -230,18 +269,9 @@ st.markdown(
     """
 , unsafe_allow_html=True)
 
-# display extracted news articles
-news_articles = extract_news_articles(selected_tickers)
+st.markdown("<p><strong>This element is in development</strong></p>", unsafe_allow_html=True)
 
-# display the stocks selected related to the extracted news articles
-tickers_string = ', '.join(selected_tickers)
-
-# provide an error if two stocks are not selected within the dropdown
-if len(selected_tickers) < 2:
-    st.error("Please select at least 2 stocks to provide recent news articles.")
-else:
-    st.write("Recent news articles for " + tickers_string + ":")
-    st.write("\n".join(news_articles))
+st.markdown("---")
 
 # provide information related to interpretin analysis of stocks
 st.markdown("""
@@ -255,31 +285,6 @@ positive sentiment and a score below 0 indicates negative sentiment, which can b
 Sentiment of News Articles chart.</p>
 """, unsafe_allow_html=True)
 
-# create sentiment bar chat
-def create_sentiment_bar_chart(sentiments, selected_tickers):
-    # Get the average sentiment scores
-    compound_sentiments = [sentiment["compound"] for sentiment in sentiments]
-    if len(compound_sentiments) > 0:
-        mean_sentiment = round(sum(compound_sentiments) / len(compound_sentiments), 2)
-    else:
-        mean_sentiment = 0
+st.markdown("<p><strong>This element is in development</strong></p>", unsafe_allow_html=True)
 
-# display sentiment bar chart
-    # Create new figure object
-    fig, ax = plt.subplots()
-    plt.bar(["Sentiment"], [mean_sentiment])
-    plt.title(f"Average Sentiment of News Articles for {selected_tickers}")
-    plt.xlabel("Sentiment")
-    plt.ylabel("Mean Score")
-    # Pass the figure object to st.pyplot
-    st.pyplot(fig)
-    # provide an error if no sentiment found for a selected ticker
-    if len(compound_sentiments) == 0:
-        st.write("No Sentiment Found for "+ ",".join(selected_tickers))
-
-# provide an error if two stocks are not selected within the dropdown
-if len(selected_tickers) < 2:
-    st.error("Please select at least 2 stocks to compare sentiment.")
-else:
-    sentiments = analyze_news_sentiment(selected_tickers)
-    create_sentiment_bar_chart(sentiments, selected_tickers)
+st.markdown("---")
