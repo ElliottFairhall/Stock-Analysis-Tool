@@ -83,10 +83,12 @@ def get_stock_data(selected_tickers):
     # Get the news for each selected ticker
     news_df = pd.DataFrame()
     for ticker in selected_tickers:
-        ticker_news = yf.Ticker(ticker).news.head(50)
-        if not ticker_news.empty:
-            ticker_news['symbol'] = ticker
-            news_df = pd.concat([news_df, ticker_news], axis=0)
+        ticker_news = yf.Ticker(ticker).news
+        if ticker_news:
+            ticker_news = ticker_news[:50]  # Slice the list to get the first 50 articles
+            if not ticker_news.empty:
+                ticker_news['symbol'] = ticker
+                news_df = pd.concat([news_df, ticker_news], axis=0)
     
     # Clean the news data
     if not news_df.empty:
