@@ -29,7 +29,7 @@ with open(css_file) as f:
     st.markdown("<style>{}</style>".format(f.read()), unsafe_allow_html=True)
 
 load_dotenv()
-News_API = os.environ["NEWS_API"]
+News_API = os.environ.get("NEWS_API")  # Use get to handle missing environment variable gracefully
 
 # Provide title for the page
 st.markdown("<h1>Introduction to Financial Analysis with Python</h1>", unsafe_allow_html=True)
@@ -64,7 +64,7 @@ st.markdown(
 # Create a multi-select box for the user to select stock tickers
 selected_tickers = st.multiselect(
     "Select stocks to analyze",
-    ["AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "META", "BABA", "WMT", "GE", "JPM", "TSM", "WMT", "CMCSA", "CVX", "PG", "WMT", "BA", "INTC", "CSCO", "PFE"],
+    ["AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "META", "BABA", "WMT", "GE", "JPM", "TSM", "CMCSA", "CVX", "PG", "BA", "INTC", "CSCO", "PFE"],
     default=["MSFT", "TSLA"]
 )
 
@@ -75,26 +75,28 @@ if len(selected_tickers) < 2:
 ticker_string = ','.join(selected_tickers)
 
 def get_stock_data(selected_tickers):
+    # Get historical stock data
     stocks_df = yf.download(selected_tickers, period='max', group_by='ticker')
     
     # Clean the data
     stocks_df.dropna(inplace=True)
     
     # Get the news for each selected ticker
-    news_df = pd.DataFrame()
+    news_df = []
     for ticker in selected_tickers:
         ticker_news = yf.Ticker(ticker).news
         if ticker_news:
             ticker_news = ticker_news[:50]  # Slice the list to get the first 50 articles
-            if not ticker_news.empty:
+            if ticker_news:
+                ticker_news = ticker_news[['publishedAt', 'title', 'url']]
                 ticker_news['symbol'] = ticker
-                news_df = pd.concat([news_df, ticker_news], axis=0)
+                news_df.append(ticker_news)
     
-    # Clean the news data
-    if not news_df.empty:
+    # Combine news data
+    if news_df:
+        news_df = pd.concat(news_df, axis=0)
         news_df['publishedAt'] = pd.to_datetime(news_df['publishedAt'])
         news_df.set_index('publishedAt', inplace=True)
-        news_df = news_df[['symbol', 'title', 'url']]
         news_df.drop_duplicates(inplace=True)
     
     return stocks_df, news_df
@@ -141,11 +143,11 @@ def relative_returns(selected_tickers, stocks_df):
     # Loop through the selected tickers
     for i, ticker in enumerate(selected_tickers):
         stock_df = stocks_df[ticker].copy()
-        stock_df.loc[:, "returns"] = stock_df["Close"].pct_change()
+        stock_df['returns'] = stock_df['Close'].pct_change()
         traces.append(
             go.Bar(
                 x=stock_df.index,
-                y=stock_df["returns"],
+                y=stock_df['returns'],
                 name=ticker,
                 marker=dict(color=bar_colors[i % len(bar_colors)])
             )
@@ -174,7 +176,7 @@ def create_scatter_plot(selected_tickers, stocks_df):
     fig, ax = plt.subplots()
     for ticker in selected_tickers:
         stock_df = stocks_df[ticker]
-        plt.scatter(stock_df.index, stock_df["Close"], label=ticker)
+        plt.scatter(stock_df.index, stock_df['Close'], label=ticker)
     plt.title("Historical Close Prices of Selected Stocks")
     plt.xlabel("Date")
     plt.ylabel("Close Price")
@@ -187,8 +189,8 @@ def create_volatility_analysis(selected_tickers, stocks_df):
     for ticker in selected_tickers:
         stock_df = stocks_df[ticker]
         stock_df.drop(stock_df.index[0], inplace=True)
-        stock_df["returns"] = stock_df["Close"].pct_change()
-        volatility = stock_df["returns"].std() * np.sqrt(252)
+        stock_df['returns'] = stock_df['Close'].pct_change()
+        volatility = stock_df['returns'].std() * np.sqrt(252)
         volatility_pct = volatility * 100
         st.write("Volatility of " + ticker + ": " + "{:.2f}%".format(volatility_pct))
 
