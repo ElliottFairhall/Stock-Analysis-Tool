@@ -74,8 +74,8 @@ if len(selected_tickers) < 2:
 # Concatenate the selected tickers into a single string for use in the API call
 ticker_string = ','.join(selected_tickers)
 
-def get_stock_data(ticker_string):
-    stocks_df = yf.download(ticker_string, period='max', group_by='ticker')
+def get_stock_data(selected_tickers):
+    stocks_df = yf.download(selected_tickers, period='max', group_by='ticker')
     
     # Clean the data
     stocks_df.dropna(inplace=True)
@@ -83,10 +83,10 @@ def get_stock_data(ticker_string):
     # Get the news for each selected ticker
     news_df = pd.DataFrame()
     for ticker in selected_tickers:
-        ticker_news = yf.Ticker(ticker).news(articles=50)
-        ticker_news_df = pd.DataFrame(ticker_news)
-        ticker_news_df['symbol'] = ticker
-        news_df = pd.concat([news_df, ticker_news_df], axis=0)
+        ticker_news = yf.Ticker(ticker).news.head(50)
+        if not ticker_news.empty:
+            ticker_news['symbol'] = ticker
+            news_df = pd.concat([news_df, ticker_news], axis=0)
     
     # Clean the news data
     if not news_df.empty:
