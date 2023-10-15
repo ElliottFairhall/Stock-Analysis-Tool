@@ -144,19 +144,13 @@ def relative_returns(selected_tickers, stocks_df):
     # Loop through the selected tickers
     for i, ticker in enumerate(selected_tickers):
         stock_df = stocks_df[ticker].copy()
-        
-        # Check if there's enough data for calculation
-        if len(stock_df) < 2:
-            st.error(f"Not enough data for {ticker} to calculate relative returns.")
-            return
-        
         stock_df.loc[:, "returns"] = stock_df["Close"].pct_change()
         traces.append(
             go.Bar(
                 x=stock_df.index,
                 y=stock_df["returns"],
                 name=ticker,
-                marker=dict(color=bar_colors[i % len(bar_colors])
+                marker=dict(color=bar_colors[i % len(bar_colors]))
             )
         )
 
