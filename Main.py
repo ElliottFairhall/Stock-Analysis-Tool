@@ -219,7 +219,7 @@ st.markdown(
     """, unsafe_allow_html=True)
 
 # Provide an error if two stocks are not selected within the dropdown
-if len selected_tickers < 2:
+if len(selected_tickers) < 2:
     st.error("Please select at least 2 stocks to create a line chart.")
 else:
     stocks_df, _ = get_stock_data(selected_tickers)  # Updated to get only stocks data
