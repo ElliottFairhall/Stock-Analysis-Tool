@@ -171,6 +171,7 @@ def relative_returns(selected_tickers, stocks_df):
     # Pass the figure object to st.plotly_chart
     st.plotly_chart(fig)
 
+
 # Create a scatter plot to show the historical close prices of selected stocks
 def create_scatter_plot(selected_tickers, stocks_df):
     # Create new figure object
