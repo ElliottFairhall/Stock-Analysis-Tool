@@ -29,7 +29,7 @@ with open(css_file) as f:
     st.markdown("<style>{}</style>".format(f.read()), unsafe_allow_html=True)
 
 load_dotenv()
-News_API = os.environ.get("NEWS_API")  # Use get to handle missing environment variable gracefully
+News_API = os.environ["NEWS_API"]
 
 # Provide title for the page
 st.markdown("<h1>Introduction to Financial Analysis with Python</h1>", unsafe_allow_html=True)
@@ -64,7 +64,7 @@ st.markdown(
 # Create a multi-select box for the user to select stock tickers
 selected_tickers = st.multiselect(
     "Select stocks to analyze",
-    ["AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "META", "BABA", "WMT", "GE", "JPM", "TSM", "CMCSA", "CVX", "PG", "BA", "INTC", "CSCO", "PFE"],
+    ["AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "META", "BABA", "WMT", "GE", "JPM", "TSM", "WMT", "CMCSA", "CVX", "PG", "WMT", "BA", "INTC", "CSCO", "PFE"],
     default=["MSFT", "TSLA"]
 )
 
@@ -84,18 +84,22 @@ def get_stock_data(selected_tickers):
     # Get the news for each selected ticker
     news_df = []
     for ticker in selected_tickers:
-        ticker_news = yf.Ticker(ticker).news
-        if ticker_news:
-            ticker_news = ticker_news[:50]  # Slice the list to get the first 50 articles
+        try:
+            ticker_news = yf.Ticker(ticker).news
             if ticker_news:
-                for article in ticker_news:
-                    article_data = {
-                        'publishedAt': article['publishedAt'],
-                        'title': article['title'],
-                        'url': article['url'],
-                        'symbol': ticker
-                    }
-                    news_df.append(article_data)
+                ticker_news = ticker_news[:50]  # Slice the list to get the first 50 articles
+                if ticker_news:
+                    for article in ticker_news:
+                        if 'publishedAt' in article:
+                            article_data = {
+                                'publishedAt': article['publishedAt'],
+                                'title': article.get('title', ''),
+                                'url': article.get('url', ''),
+                                'symbol': ticker
+                            }
+                            news_df.append(article_data)
+        except Exception as e:
+            print(f"Error while fetching news for {ticker}: {str(e)}")
     
     # Combine news data
     if news_df:
@@ -148,11 +152,11 @@ def relative_returns(selected_tickers, stocks_df):
     # Loop through the selected tickers
     for i, ticker in enumerate(selected_tickers):
         stock_df = stocks_df[ticker].copy()
-        stock_df['returns'] = stock_df['Close'].pct_change()
+        stock_df.loc[:, "returns"] = stock_df["Close"].pct_change()
         traces.append(
             go.Bar(
                 x=stock_df.index,
-                y=stock_df['returns'],
+                y=stock_df["returns"],
                 name=ticker,
                 marker=dict(color=bar_colors[i % len(bar_colors)])
             )
@@ -181,7 +185,7 @@ def create_scatter_plot(selected_tickers, stocks_df):
     fig, ax = plt.subplots()
     for ticker in selected_tickers:
         stock_df = stocks_df[ticker]
-        plt.scatter(stock_df.index, stock_df['Close'], label=ticker)
+        plt.scatter(stock_df.index, stock_df["Close"], label=ticker)
     plt.title("Historical Close Prices of Selected Stocks")
     plt.xlabel("Date")
     plt.ylabel("Close Price")
@@ -194,8 +198,8 @@ def create_volatility_analysis(selected_tickers, stocks_df):
     for ticker in selected_tickers:
         stock_df = stocks_df[ticker]
         stock_df.drop(stock_df.index[0], inplace=True)
-        stock_df['returns'] = stock_df['Close'].pct_change()
-        volatility = stock_df['returns'].std() * np.sqrt(252)
+        stock_df["returns"] = stock_df["Close"].pct_change()
+        volatility = stock_df["returns"].std() * np.sqrt(252)
         volatility_pct = volatility * 100
         st.write("Volatility of " + ticker + ": " + "{:.2f}%".format(volatility_pct))
 
@@ -215,7 +219,7 @@ st.markdown(
     """, unsafe_allow_html=True)
 
 # Provide an error if two stocks are not selected within the dropdown
-if len(selected_tickers) < 2:
+if len selected_tickers < 2:
     st.error("Please select at least 2 stocks to create a line chart.")
 else:
     stocks_df, _ = get_stock_data(selected_tickers)  # Updated to get only stocks data
