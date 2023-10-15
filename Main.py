@@ -88,13 +88,18 @@ def get_stock_data(selected_tickers):
         if ticker_news:
             ticker_news = ticker_news[:50]  # Slice the list to get the first 50 articles
             if ticker_news:
-                ticker_news = ticker_news[['publishedAt', 'title', 'url']]
-                ticker_news['symbol'] = ticker
-                news_df.append(ticker_news)
+                for article in ticker_news:
+                    article_data = {
+                        'publishedAt': article['publishedAt'],
+                        'title': article['title'],
+                        'url': article['url'],
+                        'symbol': ticker
+                    }
+                    news_df.append(article_data)
     
     # Combine news data
     if news_df:
-        news_df = pd.concat(news_df, axis=0)
+        news_df = pd.DataFrame(news_df)
         news_df['publishedAt'] = pd.to_datetime(news_df['publishedAt'])
         news_df.set_index('publishedAt', inplace=True)
         news_df.drop_duplicates(inplace=True)
