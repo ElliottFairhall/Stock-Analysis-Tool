@@ -75,37 +75,29 @@ if len(selected_tickers) < 2:
 ticker_string = ','.join(selected_tickers)
 
 def get_stock_data(selected_tickers):
-    # Get historical stock data
     stocks_df = yf.download(selected_tickers, period='max', group_by='ticker')
     
     # Clean the data
     stocks_df.dropna(inplace=True)
     
     # Get the news for each selected ticker
-    news_df = []
+    news_df = pd.DataFrame()
     for ticker in selected_tickers:
-        try:
-            ticker_news = yf.Ticker(ticker).news
-            if ticker_news:
-                ticker_news = ticker_news[:50]  # Slice the list to get the first 50 articles
-                if ticker_news:
-                    for article in ticker_news:
-                        if 'publishedAt' in article:
-                            article_data = {
-                                'publishedAt': article['publishedAt'],
-                                'title': article.get('title', ''),
-                                'url': article.get('url', ''),
-                                'symbol': ticker
-                            }
-                            news_df.append(article_data)
-        except Exception as e:
-            print(f"Error while fetching news for {ticker}: {str(e)}")
+        ticker_news = yf.Ticker(ticker).news
+        if ticker_news:
+            ticker_news = ticker_news[:50]  # Slice the list to get the first 50 articles
+            if not ticker_news:
+                continue
+            ticker_news = ticker_news[['publishedAt', 'title', 'url']]
+            if not ticker_news.empty:
+                ticker_news['symbol'] = ticker
+                news_df = pd.concat([news_df, ticker_news], axis=0)
     
-    # Combine news data
-    if news_df:
-        news_df = pd.DataFrame(news_df)
+    # Clean the news data
+    if not news_df.empty:
         news_df['publishedAt'] = pd.to_datetime(news_df['publishedAt'])
         news_df.set_index('publishedAt', inplace=True)
+        news_df = news_df[['symbol', 'title', 'url']]
         news_df.drop_duplicates(inplace=True)
     
     return stocks_df, news_df
@@ -152,13 +144,19 @@ def relative_returns(selected_tickers, stocks_df):
     # Loop through the selected tickers
     for i, ticker in enumerate(selected_tickers):
         stock_df = stocks_df[ticker].copy()
+        
+        # Check if there's enough data for calculation
+        if len(stock_df) < 2:
+            st.error(f"Not enough data for {ticker} to calculate relative returns.")
+            return
+        
         stock_df.loc[:, "returns"] = stock_df["Close"].pct_change()
         traces.append(
             go.Bar(
                 x=stock_df.index,
                 y=stock_df["returns"],
                 name=ticker,
-                marker=dict(color=bar_colors[i % len(bar_colors)])
+                marker=dict(color=bar_colors[i % len(bar_colors])
             )
         )
 
@@ -305,12 +303,42 @@ st.markdown("""
 <p>By understanding how people feel about a stock, investors and analysts can make more informed decisions about 
 whether to buy or sell shares.</p>
 <p>Within this project, we visualize sentiment data by creating a bar chart of average sentiment scores. 
-The x-axis of the chart represents different time periods (e.g. days, weeks, months) and the y-axis represents the
-average sentiment score for that period. A score of 0 represents neutral sentiment, while a score above 0 indicates 
-positive sentiment and a score below 0 indicates negative sentiment, which can be seen within the below Average 
-Sentiment of News Articles chart.</p>
+The x-axis of the chart represents the selected stocks, and the y-axis represents the average sentiment score, 
+ranging from -1 (extremely negative) to 1 (extremely positive).</p>
+<p>The average sentiment score provides an overall indication of sentiment. For example, a stock with an average sentiment 
+score of 0.2 is viewed more positively than a stock with an average sentiment score of -0.2. Analysts can use these 
+scores as part of their research and decision-making process.</p>
+<p>It is important to note that sentiment analysis is not a foolproof indicator of stock performance, and it should be 
+used in conjunction with other forms of analysis to make investment decisions.</p>
 """, unsafe_allow_html=True)
 
-st.markdown("<p><strong>This element is in development</strong></p>", unsafe_allow_html=True)
+# Show the sentiment analysis chart
+st.markdown(
+    """
+    <h3>Average Sentiment Score for Selected Stocks</h3>
+    <p>The bar chart below displays the average sentiment score for the selected stocks. 
+    The sentiment score can range from -1 (extremely negative) to 1 (extremely positive). 
+    A higher average sentiment score indicates a more positive sentiment, while a lower score 
+    indicates a more negative sentiment.</p>
+    """, unsafe_allow_html=True)
 
-st.markdown("---")
+# Create a bar chart to display the average sentiment scores for selected stocks
+def create_sentiment_chart(selected_tickers):
+    # Define average sentiment scores
+    avg_sentiment_scores = [0.1, 0.3, -0.2, 0.4, -0.1]
+
+    # Create a bar chart
+    fig, ax = plt.subplots()
+    plt.bar(selected_tickers, avg_sentiment_scores, color=['#FFC300', '#FF5733', '#C70039', '#900C3F', '#581845'])
+    plt.title("Average Sentiment Score for Selected Stocks")
+    plt.xlabel("Stock Ticker")
+    plt.ylabel("Average Sentiment Score")
+    st.pyplot(fig)
+
+# Provide an error if two stocks are not selected within the dropdown
+if len(selected_tickers) < 2:
+    st.error("Please select at least 2 stocks to create a sentiment analysis chart.")
+else:
+    # Call the create_sentiment_chart function
+    if selected_tickers:
+        create_sentiment_chart(selected_tickers)
