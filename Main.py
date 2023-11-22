@@ -59,7 +59,6 @@ def get_stock_data(ticker_string):
     stocks_df = yf.download(ticker_string, period='max', group_by='ticker')
     # Clean the data
     stocks_df.dropna(inplace=True)
-    return stocks_df
     
     # Get the news for each selected ticker
     news_df = pd.DataFrame()
