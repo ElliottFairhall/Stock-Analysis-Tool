@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 import plotly.graph_objs as go
 import numpy as np
+import pandas as pd
 from bs4 import BeautifulSoup
 from pathlib import Path
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -53,32 +54,43 @@ if len(selected_tickers) < 2:
     st.error("Please select at least 2 stocks.")
 
 # Concatenate the selected tickers into a single string for use in the API call
-ticker_string = ','.join(selected_tickers)
+ticker_string = ' '.join(selected_tickers)
 
-def get_stock_data(ticker_string):
-    stocks_df = yf.download(ticker_string, period='max', group_by='ticker')
-    # Clean the data
-    stocks_df.dropna(inplace=True)
-    
-    # Get the news for each selected ticker
-    news_df = pd.DataFrame()
-    for ticker in selected_tickers:
-        ticker_news = yf.Ticker(ticker).news(articles=50)
-        ticker_news_df = pd.DataFrame(ticker_news)
-        ticker_news_df['symbol'] = ticker
-        news_df = pd.concat([news_df, ticker_news_df], axis=0)
-    
-    # Clean the news data
-    if not news_df.empty:
-        news_df['publishedAt'] = pd.to_datetime(news_df['publishedAt'])
-        news_df.set_index('publishedAt', inplace=True)
-        news_df = news_df[['symbol', 'title', 'url']]
-        news_df.drop_duplicates(inplace=True)
-    
-    return stocks_df, news_df
+def get_stock_data(ticker_string, period='max'):
+    try:
+        stocks_df = yf.download(ticker_string, period= "2y", group_by='ticker')
+        # Clean the data
+        stocks_df.dropna(inplace=True)
+        return stocks_df
+    except Exception as e:
+        st.error(f"An error occurred while downloading the stock data: {e}")
+        return None
+
+# Get the news for each selected ticker
+# news_df = pd.DataFrame()
+# for ticker in selected_tickers:
+    # ticker_news = yf.Ticker(ticker).news
+    # if ticker_news:  # Check if news is not empty
+        # ticker_news_df = pd.DataFrame(ticker_news)
+        # ticker_news_df['symbol'] = ticker
+        # news_df = pd.concat([news_df, ticker_news_df], axis=0)
+
+# Clean the news data
+# if not news_df.empty:
+    # news_df['publishedAt'] = pd.to_datetime(news_df['publishedAt'])
+    # news_df.set_index('publishedAt', inplace=True)
+    # news_df = news_df[['symbol', 'title', 'url']]
+    # news_df.drop_duplicates(inplace=True)
+
+stocks_df = get_stock_data(ticker_string)
 
 # Create a line chart to show the historical close prices
 def create_line_chart(selected_tickers, stocks_df):
+    # Check if stocks_df is None or empty
+    if stocks_df is None or stocks_df.empty:
+        st.error("No data to plot.")
+        return
+
     # Define a list of colors for the line traces
     colors = ['#FFC300', '#FF5733', '#C70039', '#900C3F', '#581845']
 
@@ -87,26 +99,35 @@ def create_line_chart(selected_tickers, stocks_df):
 
     # Add a line trace for each selected ticker
     for i, ticker in enumerate(selected_tickers):
-        stock_df = stocks_df[ticker]
-        fig.add_trace(
-            go.Scatter(
-                x=stock_df.index,
-                y=stock_df['Close'],
-                mode='lines',
-                name=ticker,
-                line=dict(color=colors[i])
+        if ticker in stocks_df.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=stocks_df.index,
+                    y=stocks_df[ticker]['Close'],
+                    mode='lines',
+                    name=ticker,
+                    line=dict(color=colors[i % len(colors)])  # Use modulo to avoid index out of range
+                )
             )
-        )
 
     # Set the chart title and axis labels
     fig.update_layout(
         title="Close Price of Selected Stocks",
         xaxis_title="Date",
-        yaxis_title="Close Price"
+        yaxis_title="Close Price",
+        showlegend=True,
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01
+        )
     )
 
     # Show the chart
     st.plotly_chart(fig)
+
+create_line_chart(selected_tickers, stocks_df)
 
 # Create a chart to show the relative returns of selected stocks
 def relative_returns(selected_tickers, stocks_df):
@@ -119,6 +140,9 @@ def relative_returns(selected_tickers, stocks_df):
     # Loop through the selected tickers
     for i, ticker in enumerate(selected_tickers):
         stock_df = stocks_df[ticker].copy()
+        if stock_df.empty:
+            st.error(f"No data for {ticker}.")
+            continue
         stock_df.loc[:, "returns"] = stock_df["Close"].pct_change()
         traces.append(
             go.Bar(
@@ -146,32 +170,53 @@ def relative_returns(selected_tickers, stocks_df):
     # Pass the figure object to st.plotly_chart
     st.plotly_chart(fig)
 
-    # Create the figure
-    fig = go.Figure(data=traces, layout=layout)
-
 # Create a scatter plot to show the historical close prices of selected stocks
 def create_scatter_plot(selected_tickers, stocks_df):
+    # Define colors
+    colors = ['#FFC300', '#FF5733', '#C70039', '#900C3F', '#581845']
+
     # Create new figure object
     fig, ax = plt.subplots()
-    for ticker in selected_tickers:
+
+    # Loop through the selected tickers
+    for i, ticker in enumerate(selected_tickers):
         stock_df = stocks_df[ticker]
-        plt.scatter(stock_df.index, stock_df["Close"], label=ticker)
-    plt.title("Historical Close Prices of Selected Stocks")
-    plt.xlabel("Date")
-    plt.ylabel("Close Price")
-    plt.legend()   
+        if stock_df.empty:
+            st.error(f"No data for {ticker}.")
+            continue
+        ax.scatter(stock_df.index, stock_df["Close"], label=ticker, color=colors[i % len(colors)])
+
+    # Set the title and labels
+    ax.set_title("Historical Close Prices of Selected Stocks")
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Close Price")
+
+    # Add a legend
+    ax.legend()
+
     # Pass the figure object to st.pyplot
     st.pyplot(fig)
 
 # Create a volatility analysis based on selected stocks
 def create_volatility_analysis(selected_tickers, stocks_df):
     for ticker in selected_tickers:
-        stock_df = stocks_df[ticker]
+        stock_df = stocks_df[ticker].copy()
+        if stock_df.empty:
+            st.error(f"No data for {ticker}.")
+            continue
         stock_df.drop(stock_df.index[0], inplace=True)
         stock_df["returns"] = stock_df["Close"].pct_change()
         volatility = stock_df["returns"].std() * np.sqrt(252)
         volatility_pct = volatility * 100
         st.write("Volatility of " + ticker + ": " + "{:.2f}%".format(volatility_pct))
+
+stocks_df = get_stock_data(ticker_string)
+if stocks_df is None:
+    st.error("Failed to download stock data.")
+else:
+    create_line_chart(selected_tickers, stocks_df)
+    relative_returns(selected_tickers, stocks_df)
+    create_volatility_analysis(selected_tickers, stocks_df)
 
 st.markdown("---")
 
