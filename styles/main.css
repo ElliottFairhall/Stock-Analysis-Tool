@@ -1,0 +1,176 @@
+/* Import the Barlow font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;700&display=swap');
+
+/* Set the font family for all text to Barlow */
+* {
+  font-family: 'Barlow', sans-serif;
+}
+
+/* Make sure all images and videos are responsive */
+img,
+video {
+  max-width: 100%;
+}
+
+/* Make sure all buttons are responsive */
+button {
+  width: 100%;
+}
+
+/* High-fidelity premium aesthetic (V3 - Final release) */
+:root {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --primary: #fda4af;
+  /* Rose 300 */
+  --secondary: #7dd3fc;
+  /* Sky 300 */
+  --muted: #1e293b;
+  --border: #334155;
+  --glass: rgba(15, 23, 42, 0.4);
+  --glass-border: rgba(148, 163, 184, 0.1);
+  --accent-soft: #f0abfc;
+  /* Fuchsia 300 */
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@700;800&display=swap');
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body,
+[data-testid='stAppViewContainer'],
+[data-testid='stSidebar'] {
+  font-family: 'Inter', sans-serif !important;
+  background-color: var(--background);
+  background-image: radial-gradient(circle, rgba(51, 65, 85, 0.1) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+h1,
+h2,
+h3,
+h4,
+.main-title,
+.sub-title,
+[data-testid='stMetricValue'],
+[data-testid='stHeader'] {
+  font-family: 'Outfit', sans-serif !important;
+}
+
+/* Header Refinement */
+.header-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 2rem;
+}
+
+.main-title {
+  background: linear-gradient(90deg, var(--primary), var(--accent-soft));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  font-size: 4rem;
+  letter-spacing: -0.03em;
+  margin: 0;
+  line-height: 1;
+  text-align: center;
+}
+
+.sub-title {
+  color: var(--secondary);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  letter-spacing: 0.2em;
+  opacity: 0.9;
+  text-transform: uppercase;
+}
+
+/* Metric Cards */
+[data-testid='stMetric'] {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  padding: 1.5rem !important;
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+}
+
+[data-testid='stMetricValue'] {
+  font-size: 2.2rem !important;
+  font-weight: 800 !important;
+  color: var(--foreground) !important;
+}
+
+[data-testid='stMetricLabel'] {
+  font-family: 'Outfit', sans-serif !important;
+  opacity: 0.4;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+/* Tabs */
+.stTabs [data-baseweb='tab-list'] {
+  gap: 40px;
+}
+
+.stTabs [data-baseweb='tab'] {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--foreground);
+  opacity: 0.4;
+}
+
+.stTabs [aria-selected='true'] {
+  opacity: 1;
+  color: var(--secondary) !important;
+  border-bottom: 3px solid var(--secondary) !important;
+}
+
+/* Sidebar */
+[data-testid='stSidebar'] {
+  background-color: #0c111e !important;
+  border-right: 1px solid var(--border);
+}
+
+/* Override Streamlit Elements */
+div[data-baseweb='select'] > div {
+  background-color: var(--muted) !important;
+  border-radius: 8px !important;
+}
+
+.element-container:has(iframe) {
+  border-radius: 24px;
+  border: 1px solid var(--glass-border);
+  background: rgba(15, 23, 42, 0.2);
+  padding: 16px;
+  margin: 1rem 0;
+}
+
+a {
+  text-decoration: none;
+  color: #365b6d;
+  font-size: 1.2rem;
+  /* 19.2px */
+
+  &:hover {
+    color: #f7f7f7;
+  }
+}
+
+/* Customize icon styles */
+.icon-style {
+  font-family: 'Barlow', sans-serif;
+  color: #365b6d;
+  font-size: 1.5rem;
+  /* 24px */
+}

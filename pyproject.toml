@@ -1,0 +1,24 @@
+[project]
+name = "stock-analysis-tool"
+version = "0.1.0"
+description = "Financial analysis and sentiment dashboard for stocks"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "streamlit>=1.32.0",
+    "pandas>=2.0.0",
+    "yfinance>=0.2.0",
+    "matplotlib>=3.7.0",
+    "vaderSentiment>=3.3.0",
+    "beautifulsoup4>=4.12.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = []
