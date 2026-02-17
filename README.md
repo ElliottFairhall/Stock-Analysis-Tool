@@ -93,6 +93,19 @@ Stock-Analysis-Tool/
    pip install -r requirements.txt
    ```
 
+4. (Optional) Configure environment variables:
+
+   ```bash
+   cp .env.example .env
+   # Edit .env and add any API keys if needed
+   ```
+
+5. (Optional) Run diagnostic tests:
+
+   ```bash
+   python test_yfinance.py
+   ```
+
 ## Usage
 
 1. Start the application:
@@ -113,6 +126,16 @@ Stock-Analysis-Tool/
    - **Project Overview**: Methodology and strategic context.
    - **Market Dynamics**: Price history, volatility, and returns.
    - **Sentiment Intelligence**: AI-scored news relevance and sentiment polarity.
+
+## Troubleshooting
+
+If you encounter data fetching errors:
+
+1. Run the diagnostic script: `python test_yfinance.py`
+2. Check internet connectivity
+3. Verify ticker symbols are correct
+4. Review detailed error messages in the app
+5. See `IMPROVEMENTS.md` for comprehensive troubleshooting guide
 
 ## Business Use Case
 

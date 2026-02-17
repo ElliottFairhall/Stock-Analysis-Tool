@@ -1,5 +1,7 @@
+import logging
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 from PIL import Image
@@ -13,6 +15,10 @@ from src.charts import (
 
 # Import custom modules
 from src.data import get_stock_data, get_stock_news
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Configuration
 PAGE_TITLE = "Intelligence Flux: Finance Edition"
@@ -28,6 +34,27 @@ st.set_page_config(
 CURRENT_DIR = Path(__file__).parent
 CSS_FILE = CURRENT_DIR / "styles" / "main.css"
 IMAGE_FILE = CURRENT_DIR / "assets" / "images" / "Finance.jpg"
+
+
+def validate_environment() -> bool:
+    """
+    Validates required environment variables and displays errors if missing.
+
+    Returns:
+        bool: True if all required variables are present, False otherwise.
+    """
+    # NEWS_API is optional - if you want to add a News API integration
+    # For now, we're using yfinance for news, so this is just a placeholder
+
+    # You can add this check if you decide to require a NEWS_API key:
+    # if not os.environ.get("NEWS_API"):
+    #     st.error(
+    #         "Missing NEWS_API environment variable. Please set your News API key."
+    #     )
+    #     st.stop()
+    #     return False
+
+    return True
 
 
 def load_css(file_path: Path) -> None:
@@ -86,20 +113,66 @@ def render_sidebar():
 
 
 def render_metrics(selected_tickers, stocks_df):
-    if stocks_df is not None and not stocks_df.empty:
+    """
+    Renders metric cards for selected tickers.
+
+    Args:
+        selected_tickers (list): List of ticker symbols.
+        stocks_df (pd.DataFrame): Stock data DataFrame.
+    """
+    if stocks_df is None or stocks_df.empty:
+        return
+
+    try:
         cols = st.columns(len(selected_tickers))
         for i, ticker in enumerate(selected_tickers):
-            if ticker in stocks_df.columns:
-                latest_price = stocks_df[ticker]["Close"].iloc[-1]
-                prev_price = stocks_df[ticker]["Close"].iloc[-2]
+            try:
+                # Check if ticker exists in columns
+                if ticker not in stocks_df.columns:
+                    cols[i % len(cols)].metric(ticker, "N/A", "Data unavailable")
+                    continue
+
+                # Access ticker data
+                ticker_data = stocks_df[ticker]
+
+                # Check if we have enough data
+                if len(ticker_data) < 2:
+                    cols[i % len(cols)].metric(ticker, "N/A", "Insufficient data")
+                    continue
+
+                # Check if Close column exists
+                if "Close" not in ticker_data.columns:
+                    cols[i % len(cols)].metric(ticker, "N/A", "No price data")
+                    continue
+
+                latest_price = ticker_data["Close"].iloc[-1]
+                prev_price = ticker_data["Close"].iloc[-2]
+
+                # Handle NaN values
+                if pd.isna(latest_price) or pd.isna(prev_price):
+                    cols[i % len(cols)].metric(ticker, "N/A", "Invalid data")
+                    continue
+
                 delta = (latest_price - prev_price) / prev_price * 100
                 cols[i % len(cols)].metric(
                     ticker, f"${latest_price:.2f}", f"{delta:.2f}%"
                 )
 
+            except Exception as e:
+                cols[i % len(cols)].metric(ticker, "Error", str(e)[:20])
+                logging.error(f"Error rendering metric for {ticker}: {e}")
+
+    except Exception as e:
+        st.error(f"Error rendering metrics: {e}")
+
 
 def main():
     load_dotenv()
+
+    # Validate environment variables
+    if not validate_environment():
+        return
+
     load_css(CSS_FILE)
     render_header()
 
@@ -111,10 +184,38 @@ def main():
 
     # Load data
     ticker_string = " ".join(selected_tickers)
-    stocks_df = get_stock_data(ticker_string)
 
-    if stocks_df is None or stocks_df.empty:
-        st.error("Terminal Error: Could not synchronize with market data stream.")
+    with st.spinner("Synchronizing with market data stream..."):
+        stocks_df = get_stock_data(ticker_string)
+
+    if stocks_df is None:
+        st.error(
+            """
+            **Terminal Error: Could not synchronize with market data stream.**
+
+            This could be due to:
+            - Network connectivity issues
+            - Yahoo Finance API is temporarily unavailable
+            - Invalid ticker symbols
+            - Rate limiting from Yahoo Finance
+
+            Please try again in a few moments or select different tickers.
+            """
+        )
+        return
+
+    if stocks_df.empty:
+        tickers_str = ", ".join(selected_tickers)
+        st.error(
+            f"""
+            **No data available for the selected tickers: {tickers_str}**
+
+            Please verify:
+            - Ticker symbols are correct
+            - Markets are open or have recent trading data
+            - Your internet connection is stable
+            """
+        )
         return
 
     # Layout
@@ -174,11 +275,13 @@ def main():
             """
         ### Strategic Overview
         This project showcases high-fidelity financial analysis techniques using Python.
-        Utilizing `yfinance`, `Plotly`, `Streamlit`, and `VaderSentiment` to deconstruct market data and news cycles.
+        Utilizing `yfinance`, `Plotly`, `Streamlit`, and `VaderSentiment` to deconstruct
+        market data and news cycles.
 
         ### Methodology
         - **Market Dynamics:** Historical price trends and realized volatility metrics.
-        - **Sentiment Flux:** Natural Language Processing (NLP) applied to live news feeds for ticker-specific resonance.
+        - **Sentiment Flux:** Natural Language Processing (NLP) applied to live news
+          feeds for ticker-specific resonance.
         - **Aesthetic:** Driven by the Intelligence Flux design system (Soft Rose/Sky).
         """
         )
