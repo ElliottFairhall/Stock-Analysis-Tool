@@ -1,14 +1,18 @@
 import logging
 
 import pandas as pd
+import streamlit as st
 import yfinance as yf
+
+from src.news import fetch_headlines
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def get_stock_data(ticker_string, period="2y"):
+@st.cache_data(ttl=900, show_spinner=False)
+def get_stock_data(ticker_string: str, period: str = "2y") -> pd.DataFrame | None:
     """
     Downloads stock data for the given tickers.
 
@@ -40,7 +44,7 @@ def get_stock_data(ticker_string, period="2y"):
             return None
 
         # Clean the data
-        stocks_df.dropna(inplace=True)
+        stocks_df = stocks_df.dropna(how="all")
 
         if stocks_df.empty:
             logger.warning(
@@ -56,7 +60,7 @@ def get_stock_data(ticker_string, period="2y"):
         return None
 
 
-def get_stock_news(selected_tickers):
+def _yfinance_news(selected_tickers: list[str]) -> pd.DataFrame:
     """
     Fetches news for the selected tickers using yfinance.
 
@@ -140,10 +144,31 @@ def get_stock_news(selected_tickers):
                 news_df["publishedAt"], errors="coerce"
             )
 
-        news_df.drop_duplicates(inplace=True)
+        news_df = news_df.drop_duplicates()
         logger.info(f"Successfully fetched {len(news_df)} news items")
     else:
         logger.info("No news data retrieved for any ticker")
         news_df = pd.DataFrame()
 
     return news_df
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def get_stock_news(selected_tickers: list[str]) -> pd.DataFrame:
+    """Fetch recent headlines for the given tickers.
+
+    Uses Yahoo Finance's RSS feed, which works, and falls back to yfinance's
+    news endpoint, which currently returns nothing, in case that recovers.
+
+    Args:
+        selected_tickers: Ticker symbols.
+
+    Returns:
+        Headlines, newest first; an empty frame if nothing was found.
+    """
+    if not selected_tickers:
+        return pd.DataFrame()
+    headlines = fetch_headlines(selected_tickers)
+    if not headlines.empty:
+        return headlines
+    return _yfinance_news(selected_tickers)

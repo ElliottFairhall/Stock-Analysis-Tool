@@ -1,134 +1,249 @@
-import plotly.graph_objs as go
+"""Plotly figures for the stock comparison."""
 
-# Premium Color Palette
-COLORS = ["#fda4af", "#7dd3fc", "#f0abfc", "#fb7185", "#38bdf8"]
+from __future__ import annotations
+
+import pandas as pd
+import plotly.graph_objects as go
+
+from src.analysis import daily_returns, drawdown_series, rebase, rolling_volatility
+from src.universe import BENCHMARK_NAME
+
+# Data Flakes palette, one colour per ticker (the app allows five).
+COLOURS = [
+    "#5E8FBA",
+    "#C06C84",
+    "#F8B195",
+    "#6C5B7B",
+    "#F67280",
+    "#355C7D",
+    "#E8A0AF",
+    "#9BB5CE",
+]
+BENCHMARK_COLOUR = "#94A3B8"
+POSITIVE = "#5E8FBA"
+NEGATIVE = "#F67280"
+FONT = {"family": "Inter, sans-serif", "size": 13}
+GRID = "rgba(128,128,128,0.18)"
 
 
-def create_line_chart_figure(selected_tickers, stocks_df):
-    """
-    Creates a plotly figure for historical close prices.
-    """
-    if stocks_df is None or stocks_df.empty:
-        return None
+def _colour(ticker: str, position: int) -> str:
+    """Pick a colour: grey for the benchmark, otherwise by position."""
+    if ticker == BENCHMARK_NAME:
+        return BENCHMARK_COLOUR
+    return COLOURS[position % len(COLOURS)]
 
-    fig = go.Figure()
 
-    for i, ticker in enumerate(selected_tickers):
-        try:
-            if ticker in stocks_df.columns:
-                close_data = stocks_df[ticker]["Close"]
-            else:
-                continue
+def _dash(ticker: str) -> str:
+    return "dot" if ticker == BENCHMARK_NAME else "solid"
 
-            fig.add_trace(
-                go.Scatter(
-                    x=close_data.index,
-                    y=close_data,
-                    mode="lines",
-                    name=ticker,
-                    line=dict(color=COLORS[i % len(COLORS)], width=2.5),
-                )
-            )
-        except (KeyError, ValueError):
-            continue
 
+def _style(fig: go.Figure, height: int) -> go.Figure:
     fig.update_layout(
-        title="Historical Market Performance",
-        xaxis_title="Timeline",
-        yaxis_title="Close Price (USD)",
-        template="plotly_dark",
-        paper_bgcolor="rgba(0,0,0,0)",
+        height=height,
+        margin={"t": 8, "b": 8, "l": 8, "r": 8},
+        font=FONT,
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", size=14, color="#f8fafc"),
-        hovermode="x unified",
-        margin=dict(l=20, r=20, t=60, b=20),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+    fig.update_xaxes(gridcolor=GRID, zeroline=False)
+    fig.update_yaxes(gridcolor=GRID, zeroline=False)
+    return fig
+
+
+def price_figure(closes: pd.DataFrame, indexed: bool) -> go.Figure:
+    """Line chart of closing prices.
+
+    Args:
+        closes: One column per ticker.
+        indexed: If true, every line starts at 100 so growth is comparable.
+
+    Returns:
+        The figure.
+    """
+    data = rebase(closes) if indexed else closes
+    fig = go.Figure()
+    for position, ticker in enumerate(data.columns):
+        fig.add_scatter(
+            x=data.index,
+            y=data[ticker],
+            name=ticker,
+            mode="lines",
+            line={
+                "color": _colour(ticker, position),
+                "width": 2,
+                "dash": _dash(ticker),
+            },
+            hovertemplate="%{y:.1f}" if indexed else "$%{y:.2f}",
+        )
+    _style(fig, 400)
+    fig.update_layout(
+        hovermode="x unified", legend={"orientation": "h", "y": 1.1, "x": 0}
+    )
+    fig.update_yaxes(title="Index (start = 100)" if indexed else "Close (USD)")
+    return fig
+
+
+def risk_return_figure(summary: pd.DataFrame) -> go.Figure:
+    """Scatter of period return against volatility, one point per ticker.
+
+    Args:
+        summary: Frame from ``analysis.summary_table``.
+
+    Returns:
+        The figure.
+    """
+    fig = go.Figure()
+    for position, row in summary.reset_index(drop=True).iterrows():
+        fig.add_scatter(
+            x=[row["Volatility"]],
+            y=[row["Return"]],
+            mode="markers+text",
+            text=[row["Ticker"]],
+            textposition="top center",
+            name=row["Ticker"],
+            showlegend=False,
+            marker={"size": 14, "color": _colour(row["Ticker"], int(position))},
+            hovertemplate="Volatility %{x:.1f}%<br>Return %{y:.1f}%",
+        )
+    _style(fig, 340)
+    fig.update_layout(margin={"t": 28, "b": 8, "l": 8, "r": 24})
+    fig.update_xaxes(title="Volatility (annualised, %)")
+    fig.update_yaxes(title="Return over the period (%)")
+    return fig
+
+
+def sentiment_figure(news_df: pd.DataFrame) -> go.Figure | None:
+    """Stacked bars of positive, neutral and negative headlines per stock.
+
+    Args:
+        news_df: Frame with ``symbol`` and ``tone`` columns.
+
+    Returns:
+        The figure, or None if there is nothing to plot.
+    """
+    if news_df is None or news_df.empty or "tone" not in news_df:
+        return None
+    counts = pd.crosstab(news_df["symbol"], news_df["tone"])
+    colours = {"Positive": POSITIVE, "Neutral": "#CBD5E1", "Negative": NEGATIVE}
+    fig = go.Figure()
+    for label, colour in colours.items():
+        if label in counts:
+            fig.add_bar(
+                y=counts.index,
+                x=counts[label],
+                name=label,
+                orientation="h",
+                marker_color=colour,
+                hovertemplate="%{x} " + label.lower() + " headlines<extra></extra>",
+            )
+    _style(fig, 90 + 46 * len(counts))
+    fig.update_layout(barmode="stack", legend={"orientation": "h", "y": 1.2, "x": 0})
+    fig.update_xaxes(title="Headlines", dtick=1)
+    fig.update_yaxes(autorange="reversed")
+    return fig
+
+
+def _lines(data: pd.DataFrame, unit: str) -> go.Figure:
+    fig = go.Figure()
+    for position, ticker in enumerate(data.columns):
+        fig.add_scatter(
+            x=data.index,
+            y=data[ticker],
+            name=ticker,
+            mode="lines",
+            line={
+                "color": _colour(ticker, position),
+                "width": 2,
+                "dash": _dash(ticker),
+            },
+            hovertemplate="%{y:.1f}" + unit,
+        )
+    _style(fig, 340)
+    fig.update_layout(
+        hovermode="x unified", legend={"orientation": "h", "y": 1.12, "x": 0}
     )
     return fig
 
 
-def create_relative_returns_figure(selected_tickers, stocks_df):
+def drawdown_figure(closes: pd.DataFrame) -> go.Figure:
+    """Line chart of each stock's distance below its previous high.
+
+    Args:
+        closes: One column per ticker.
+
+    Returns:
+        The figure.
     """
-    Creates a plotly figure for relative returns.
+    fig = _lines(drawdown_series(closes), "%")
+    fig.update_yaxes(title="Below previous high (%)", ticksuffix="%")
+    return fig
+
+
+def rolling_volatility_figure(closes: pd.DataFrame, window: int) -> go.Figure:
+    """Line chart of rolling annualised volatility.
+
+    Args:
+        closes: One column per ticker.
+        window: Trading days in each rolling window.
+
+    Returns:
+        The figure.
     """
-    if stocks_df is None or stocks_df.empty:
-        return None
+    fig = _lines(rolling_volatility(closes, window).dropna(how="all"), "%")
+    fig.update_yaxes(title=f"{window}-day volatility (annualised)", ticksuffix="%")
+    return fig
 
-    traces = []
 
-    for i, ticker in enumerate(selected_tickers):
-        if ticker not in stocks_df.columns:
-            continue
+def correlation_figure(corr: pd.DataFrame) -> go.Figure:
+    """Heatmap of daily-return correlation between stocks.
 
-        stock_df = stocks_df[ticker].copy()
-        if stock_df.empty:
-            continue
+    Args:
+        corr: Square correlation frame.
 
-        stock_df.loc[:, "returns"] = stock_df["Close"].pct_change() * 100
-        traces.append(
-            go.Bar(
-                x=stock_df.index,
-                y=stock_df["returns"],
-                name=ticker,
-                marker=dict(color=COLORS[i % len(COLORS)]),
-            )
+    Returns:
+        The figure.
+    """
+    fig = go.Figure(
+        go.Heatmap(
+            z=corr.values,
+            x=list(corr.columns),
+            y=list(corr.index),
+            zmin=-1,
+            zmax=1,
+            colorscale=[[0, NEGATIVE], [0.5, "#F1F5F9"], [1, POSITIVE]],
+            text=corr.round(2).values,
+            texttemplate="%{text}",
+            hovertemplate="%{x} vs %{y}: %{z:.2f}<extra></extra>",
+            colorbar={"title": "Correlation"},
         )
-
-    layout = go.Layout(
-        title="Dynamic Growth Engine (Relative Returns %)",
-        xaxis=dict(title="Timeline"),
-        yaxis=dict(title="Return Velocity (%)"),
-        barmode="group",
-        template="plotly_dark",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", size=14, color="#f8fafc"),
-        hovermode="x unified",
-        margin=dict(l=20, r=20, t=60, b=20),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
+    _style(fig, 90 + 70 * len(corr))
+    fig.update_yaxes(autorange="reversed", showgrid=False)
+    fig.update_xaxes(showgrid=False)
+    return fig
 
-    return go.Figure(data=traces, layout=layout)
 
+def returns_figure(closes: pd.DataFrame) -> go.Figure:
+    """Overlaid histograms of daily returns.
 
-def create_sentiment_chart_figure(news_df):
+    Args:
+        closes: One column per ticker.
+
+    Returns:
+        The figure.
     """
-    Creates a bar chart of average sentiment scores by stock.
-    """
-    if news_df is None or news_df.empty or "sentiment_score" not in news_df.columns:
-        return None
-
-    if "publishedAt" in news_df.columns:
-        # Group by Symbol for a comparative summary
-        df_grouped = news_df.groupby("symbol")["sentiment_score"].mean().reset_index()
-
-        fig = go.Figure()
-
-        fig.add_trace(
-            go.Bar(
-                x=df_grouped["symbol"],
-                y=df_grouped["sentiment_score"],
-                marker=dict(
-                    color=df_grouped["sentiment_score"],
-                    colorscale="RdYlGn",
-                    showscale=True,
-                    colorbar=dict(title="Sentiment Intensity"),
-                ),
-                text=df_grouped["sentiment_score"].round(2),
-                textposition="auto",
-            )
+    returns = daily_returns(closes)
+    fig = go.Figure()
+    for position, ticker in enumerate(returns.columns):
+        fig.add_histogram(
+            x=returns[ticker].dropna(),
+            name=ticker,
+            opacity=0.65,
+            nbinsx=50,
+            marker_color=_colour(ticker, position),
         )
-
-        fig.update_layout(
-            title="Market Resonance Indicator (Sentiment Analysis)",
-            xaxis_title="Ticker Symbol",
-            yaxis_title="Mean Resonance Score",
-            template="plotly_dark",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Inter, sans-serif", size=14, color="#f8fafc"),
-            margin=dict(l=20, r=20, t=60, b=20),
-        )
-        return fig
-    else:
-        return None
+    _style(fig, 340)
+    fig.update_layout(barmode="overlay", legend={"orientation": "h", "y": 1.12})
+    fig.update_xaxes(title="Daily return (%)", ticksuffix="%")
+    fig.update_yaxes(title="Days")
+    return fig

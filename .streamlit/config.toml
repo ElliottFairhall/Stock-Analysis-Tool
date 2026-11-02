@@ -1,9 +1,28 @@
+# Data Flakes theme (https://www.data-flakes.dev/). Light and dark follow the
+# viewer's system setting. Fonts, radius and chart colours are set here so the
+# stylesheet only has to cover what the theme cannot.
 [theme]
-primaryColor = "#fda4af"
-backgroundColor = "#0f172a"
-secondaryBackgroundColor = "#1e293b"
-textColor = "#f8fafc"
-font = "sans serif"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap, monospace"
+baseRadius = "0.5rem"
+showWidgetBorder = true
+headingFontSizes = ["2.25rem", "1.5rem", "1.25rem", "1.1rem", "1rem", "0.9rem"]
+headingFontWeights = [650, 600, 600, 600, 600, 600]
+chartCategoricalColors = ["#5E8FBA", "#C06C84", "#F8B195", "#6C5B7B", "#F67280"]
+
+[theme.light]
+primaryColor = "#355C7D"
+backgroundColor = "#F9FAFB"
+secondaryBackgroundColor = "#F1F5F9"
+textColor = "#0F1729"
+borderColor = "#E1E7EF"
+
+[theme.dark]
+primaryColor = "#5E8FBA"
+backgroundColor = "#0F1729"
+secondaryBackgroundColor = "#1D283A"
+textColor = "#F8FAFC"
+borderColor = "#27364E"
 
 [server]
 headless = true
